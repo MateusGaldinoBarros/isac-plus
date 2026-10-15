@@ -1,0 +1,55 @@
+services:
+  evolution-api:
+    image: evoapicloud/evolution-api:v2.3.7
+    container_name: evolution_api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    volumes:
+      - evolution_instances:/evolution/instances
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      redis:
+        condition: service_healthy
+      evolution-postgres:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    container_name: evolution_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      # 6379 no host ja e usado por outro projeto; internamente continua redis:6379
+      - "6380:6379"
+    volumes:
+      - evolution_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  evolution-postgres:
+    image: postgres:16-alpine
+    container_name: evolution_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${EVO_DB_USER}
+      POSTGRES_PASSWORD: ${EVO_DB_PASSWORD}
+      POSTGRES_DB: evolution
+    volumes:
+      - evolution_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${EVO_DB_USER} -d evolution"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  evolution_instances:
+  evolution_redis:
+  evolution_postgres:
