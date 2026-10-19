@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-This guide is in `src/main/java/model`, which currently contains the `model` package (including `anuncio.java`). The repository root is four levels above this directory. Application code lives under `src/main/java/com/dev/isac_plus`; runtime configuration is in `src/main/resources/application.properties`; tests are in `src/test/java/com/dev/isac_plus`. The Maven build and wrapper are at the repository root (`pom.xml`, `mvnw`, and `mvnw.cmd`). Keep Java packages aligned with their directory paths.
+This guide is at the repository root. Application code lives under `src/main/java/com/dev/isac_plus`, organized in layers: `model`, `dto`, `mapper`, `repository`, `service`, `controller` and `exception`; runtime configuration is in `src/main/resources/application.properties`; tests are in `src/test/java/com/dev/isac_plus`. The Maven build and wrapper are at the repository root (`pom.xml`, `mvnw`, and `mvnw.cmd`). Keep Java packages aligned with their directory paths.
 
 ## Build, Test, and Development Commands
 
