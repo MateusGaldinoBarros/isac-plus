@@ -49,6 +49,17 @@ services:
       timeout: 5s
       retries: 5
 
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: isac_plus_backend
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    env_file:
+      - .env.local
+
 volumes:
   evolution_instances:
   evolution_redis:
