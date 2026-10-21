@@ -11,8 +11,8 @@ public class HashUtil {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
 
             // transforma a senha em bytes e hasha ela
-            bytes[] senhaBytes = senhaPura.getBytes(StandardCharsets.UTF_8);
-            bytes[] hashGerado = digest.digest(senhaBytes);
+            byte[] senhaBytes = senhaPura.getBytes(StandardCharsets.UTF_8);
+            byte[] hashGerado = digest.digest(senhaBytes);
 
             return Base64.getEncoder().encodeToString(hashGerado);
 
