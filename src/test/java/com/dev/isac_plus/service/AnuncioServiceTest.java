@@ -19,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.dev.isac_plus.dto.AnuncioRequest;
 import com.dev.isac_plus.dto.AnuncioResponse;
+import com.dev.isac_plus.dto.MensagemRecebida;
 import com.dev.isac_plus.exception.RecursoNaoEncontradoException;
 import com.dev.isac_plus.mapper.AnuncioMapper;
 import com.dev.isac_plus.model.Anuncio;
@@ -72,6 +73,31 @@ class AnuncioServiceTest {
 		verify(repository).save(captor.capture());
 		assertThat(captor.getValue().getTitulo()).isEqualTo("Bike");
 		assertThat(resposta.contato()).isEqualTo("1");
+	}
+
+	@Test
+	void criarDeMensagemMapeiaOsCamposEGuardaOIdParaDeduplicar() {
+		when(repository.save(any(Anuncio.class))).thenAnswer(inv -> inv.getArgument(0));
+		MensagemRecebida mensagem = new MensagemRecebida("ABC", "ong", "5511999", "Ana", "Vendo bicicleta");
+
+		AnuncioResponse resposta = service.criarDeMensagem(mensagem).orElseThrow();
+
+		ArgumentCaptor<Anuncio> captor = ArgumentCaptor.forClass(Anuncio.class);
+		verify(repository).save(captor.capture());
+		assertThat(captor.getValue().getTitulo()).isEmpty();
+		assertThat(captor.getValue().getDescricao()).isEqualTo("Vendo bicicleta");
+		assertThat(captor.getValue().getContato()).isEqualTo("5511999");
+		assertThat(captor.getValue().getIdWhatsapp()).isEqualTo("ABC");
+		assertThat(resposta.titulo()).isEmpty();
+	}
+
+	@Test
+	void naoCriaOutroAnuncioQuandoIdWhatsappJaFoiProcessado() {
+		when(repository.existsByIdWhatsapp("ABC")).thenReturn(true);
+
+		assertThat(service.criarDeMensagem(new MensagemRecebida("ABC", "ong", "5511999", "Ana", "Vendo bicicleta")))
+				.isEmpty();
+		verify(repository, never()).save(any());
 	}
 
 	@Test

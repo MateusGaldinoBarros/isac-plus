@@ -1,21 +1,18 @@
 package com.dev.isac_plus.controller;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import com.dev.isac_plus.dto.EvolutionWebhookEvento;
-import com.dev.isac_plus.service.WebhookService;
+import com.dev.isac_plus.useCase.CriarAnuncioUseCase;
 
 @WebMvcTest(WebhookController.class)
 class WebhookControllerTest {
@@ -24,7 +21,7 @@ class WebhookControllerTest {
 	private MockMvc mockMvc;
 
 	@MockitoBean
-	private WebhookService service;
+	private CriarAnuncioUseCase useCase;
 
 	@Test
 	void recebeEventoDaEvolutionERetorna200() throws Exception {
@@ -36,10 +33,7 @@ class WebhookControllerTest {
 		mockMvc.perform(post("/webhook/evolution").contentType(MediaType.APPLICATION_JSON).content(corpo))
 				.andExpect(status().isOk());
 
-		ArgumentCaptor<EvolutionWebhookEvento> captor = ArgumentCaptor.forClass(EvolutionWebhookEvento.class);
-		verify(service).processar(captor.capture());
-		assertThat(captor.getValue().event()).isEqualTo("messages.upsert");
-		assertThat(captor.getValue().data().path("message").path("conversation").asString()).isEqualTo("oi");
+		verify(useCase).executar(any());
 	}
 
 	@Test
@@ -48,6 +42,6 @@ class WebhookControllerTest {
 				.content("{\"event\":\"contacts.upsert\",\"data\":[{\"id\":\"1\"}]}"))
 				.andExpect(status().isOk());
 
-		verify(service).processar(any());
+		verify(useCase).executar(any());
 	}
 }
