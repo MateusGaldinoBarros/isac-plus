@@ -7,22 +7,22 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.dev.isac_plus.dto.EvolutionWebhookEvento;
-import com.dev.isac_plus.service.WebhookService;
+import com.dev.isac_plus.useCase.CriarAnuncioUseCase;
 
 @RestController
 @RequestMapping("/webhook")
 public class WebhookController {
 
-	private final WebhookService service;
+	private final CriarAnuncioUseCase useCase;
 
-	public WebhookController(WebhookService service) {
-		this.service = service;
+	public WebhookController(CriarAnuncioUseCase useCase) {
+		this.useCase = useCase;
 	}
 
 	// Responde 200 mesmo para eventos ignorados, senao a Evolution fica reenviando.
 	@PostMapping("/evolution")
 	public ResponseEntity<Void> receber(@RequestBody EvolutionWebhookEvento evento) {
-		service.processar(evento);
+		useCase.executar(evento);
 		return ResponseEntity.ok().build();
 	}
 }

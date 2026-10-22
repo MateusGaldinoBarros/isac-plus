@@ -1,12 +1,14 @@
 package com.dev.isac_plus.service;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.dev.isac_plus.dto.AnuncioRequest;
 import com.dev.isac_plus.dto.AnuncioResponse;
+import com.dev.isac_plus.dto.MensagemRecebida;
 import com.dev.isac_plus.exception.RecursoNaoEncontradoException;
 import com.dev.isac_plus.mapper.AnuncioMapper;
 import com.dev.isac_plus.model.Anuncio;
@@ -37,6 +39,16 @@ public class AnuncioService {
 	public AnuncioResponse criar(AnuncioRequest request) {
 		Anuncio salvo = repository.save(mapper.toEntity(request));
 		return mapper.toResponse(salvo);
+	}
+
+	@Transactional
+	public Optional<AnuncioResponse> criarDeMensagem(MensagemRecebida mensagem) {
+		if (mensagem.idWhatsapp() != null && repository.existsByIdWhatsapp(mensagem.idWhatsapp())) {
+			return Optional.empty();
+		}
+
+		Anuncio anuncio = new Anuncio("", mensagem.texto(), mensagem.numero(), mensagem.idWhatsapp());
+		return Optional.of(mapper.toResponse(repository.save(anuncio)));
 	}
 
 	@Transactional
