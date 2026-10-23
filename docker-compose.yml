@@ -49,6 +49,27 @@ services:
       timeout: 5s
       retries: 5
 
+  # Armazenamento de imagens compativel com S3 (gratuito, Apache 2.0).
+  # O backend fala S3 puro, entao em producao da para trocar por R2/S3 so mudando as variaveis.
+  seaweedfs:
+    image: chrislusf/seaweedfs:3.97
+    container_name: isac_plus_storage
+    restart: unless-stopped
+    command: server -dir=/data -s3
+    environment:
+      # Sem essas chaves o S3 recusa qualquer requisicao (403)
+      AWS_ACCESS_KEY_ID: ${STORAGE_ACCESS_KEY:?defina STORAGE_ACCESS_KEY no .env}
+      AWS_SECRET_ACCESS_KEY: ${STORAGE_SECRET_KEY:?defina STORAGE_SECRET_KEY no .env}
+    ports:
+      - "8333:8333"
+    volumes:
+      - isac_plus_storage:/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8333/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: .
@@ -59,8 +80,17 @@ services:
       - "8081:8081"
     env_file:
       - .env.local
+    environment:
+      # Dentro do Docker o storage e acessado pelo nome do servico, nao por localhost
+      S3_ENDPOINT: http://seaweedfs:8333
+      S3_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
+      S3_SECRET_KEY: ${STORAGE_SECRET_KEY}
+    depends_on:
+      seaweedfs:
+        condition: service_healthy
 
 volumes:
   evolution_instances:
   evolution_redis:
   evolution_postgres:
+  isac_plus_storage:
