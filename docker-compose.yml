@@ -16,6 +16,8 @@ services:
         condition: service_healthy
       evolution-postgres:
         condition: service_healthy
+    environment:
+        - TYPEBOT_ENABLED=true    
 
   redis:
     image: redis:7-alpine
