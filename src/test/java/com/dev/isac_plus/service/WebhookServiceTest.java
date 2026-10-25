@@ -64,10 +64,11 @@ class WebhookServiceTest {
 	void naoSalvaDeNovoQuandoAEvolutionReenvia() {
 		when(repository.existsByIdWhatsapp("ABC123")).thenReturn(true);
 
-		processar("messages.upsert", """
+		Optional<MensagemRecebida> resultado = processar("messages.upsert", """
 				{"key":{"remoteJid":"551188@s.whatsapp.net","id":"ABC123"},"message":{"conversation":"oi"}}
 				""");
 
+		assertThat(resultado).isEmpty();
 		verify(repository, never()).save(any());
 	}
 
