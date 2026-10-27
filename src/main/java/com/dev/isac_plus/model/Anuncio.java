@@ -1,10 +1,17 @@
 package com.dev.isac_plus.model;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 
 @Entity
 public class Anuncio {
@@ -21,6 +28,11 @@ public class Anuncio {
 
 	@Column(unique = true)
 	private String idWhatsapp;
+
+	// Apagar o anuncio apaga as linhas das imagens (sem isso a chave estrangeira impediria o delete).
+	@OneToMany(mappedBy = "anuncio", cascade = CascadeType.REMOVE)
+	@OrderBy("ordem ASC, id ASC")
+	private List<ImagemAnuncio> imagens = new ArrayList<>();
 
 	protected Anuncio() {
 	}
@@ -66,5 +78,10 @@ public class Anuncio {
 
 	public void setContato(String contato) {
 		this.contato = contato;
+	}
+
+	/** Somente leitura: imagens sao criadas pelo fluxo do webhook, nao pelo anuncio. */
+	public List<ImagemAnuncio> getImagens() {
+		return Collections.unmodifiableList(imagens);
 	}
 }
