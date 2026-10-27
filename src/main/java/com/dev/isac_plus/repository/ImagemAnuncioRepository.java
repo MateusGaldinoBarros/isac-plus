@@ -15,6 +15,9 @@ public interface ImagemAnuncioRepository extends JpaRepository<ImagemAnuncio, Lo
 
 	boolean existsByIdWhatsapp(String idWhatsapp);
 
+	/** Imagem que o front pode ver: salva e de anuncio publicado. */
+	Optional<ImagemAnuncio> findByIdAndStatusAndAnuncioRascunhoFalse(Long id, StatusImagem status);
+
 	/** Imagens com o status dado cuja hora de tentar ja chegou, das mais antigas para as mais novas. */
 	List<ImagemAnuncio> findByStatusAndProximaTentativaEmLessThanEqualOrderByProximaTentativaEmAsc(
 			StatusImagem status, Instant agora, Limit limite);

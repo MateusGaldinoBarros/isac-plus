@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.hibernate.annotations.BatchSize;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -42,6 +44,8 @@ public class Anuncio {
 	// Apagar o anuncio apaga as linhas das imagens (sem isso a chave estrangeira impediria o delete).
 	@OneToMany(mappedBy = "anuncio", cascade = CascadeType.REMOVE)
 	@OrderBy("ordem ASC, id ASC")
+	// Na listagem carrega as imagens de ate 50 anuncios por consulta, em vez de uma consulta por anuncio
+	@BatchSize(size = 50)
 	private List<ImagemAnuncio> imagens = new ArrayList<>();
 
 	protected Anuncio() {
