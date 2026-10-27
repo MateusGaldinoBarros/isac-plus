@@ -16,8 +16,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.dev.isac_plus.dto.EvolutionWebhookEvento;
+import com.dev.isac_plus.dto.ImagemRecebida;
 import com.dev.isac_plus.dto.MensagemRecebida;
 import com.dev.isac_plus.model.Mensagem;
+import com.dev.isac_plus.model.MetadadosImagem;
 import com.dev.isac_plus.repository.MensagemRepository;
 
 import tools.jackson.databind.json.JsonMapper;
@@ -120,5 +122,88 @@ class WebhookServiceTest {
 		assertThat(service.processar(null)).isEmpty();
 
 		verify(repository, never()).save(any());
+	}
+
+	private Optional<ImagemRecebida> imagem(String data) {
+		return service.extrairImagem(new EvolutionWebhookEvento("messages.upsert", "ong", json.readTree(data)));
+	}
+
+	@Test
+	void extraiImagemComLegendaMetadadosEPayload() {
+		ImagemRecebida img = imagem("""
+				{"key":{"remoteJid":"5511999990000@s.whatsapp.net","fromMe":false,"id":"IMG1"},
+				 "message":{"imageMessage":{"mimetype":"image/jpeg","fileLength":"84512","width":1080,"height":1350,
+				   "caption":"Vendo bike"}}}
+				""").orElseThrow();
+
+		assertThat(img.idWhatsapp()).isEqualTo("IMG1");
+		assertThat(img.instancia()).isEqualTo("ong");
+		assertThat(img.numero()).isEqualTo("5511999990000");
+		assertThat(img.legenda()).isEqualTo("Vendo bike");
+		assertThat(img.idAlbum()).isNull();
+		assertThat(img.metadados()).isEqualTo(new MetadadosImagem("image/jpeg", 84512L, 1080, 1350));
+		assertThat(json.readTree(img.payload()).path("key").path("id").asString()).isEqualTo("IMG1");
+	}
+
+	@Test
+	void extraiOIdDoAlbumDaFoto() {
+		assertThat(imagem("""
+				{"key":{"remoteJid":"551188@s.whatsapp.net","id":"IMG2"},
+				 "message":{"imageMessage":{"mimetype":"image/jpeg"},
+				   "messageContextInfo":{"messageAssociation":{"associationType":"MEDIA_ALBUM",
+				     "parentMessageKey":{"id":"ALBUM1"}}}}}
+				""")).map(ImagemRecebida::idAlbum).contains("ALBUM1");
+	}
+
+	@Test
+	void tamanhoNoFormatoLongDoProtobufEhConvertido() {
+		assertThat(imagem("""
+				{"key":{"remoteJid":"551188@s.whatsapp.net","id":"IMG3"},
+				 "message":{"imageMessage":{"mimetype":"image/png","fileLength":{"low":5000,"high":0,"unsigned":true}}}}
+				""")).map(i -> i.metadados().tamanhoBytes()).contains(5000L);
+	}
+
+	@Test
+	void aceitaImagemMandadaComoDocumento() {
+		assertThat(imagem("""
+				{"key":{"remoteJid":"551188@s.whatsapp.net","id":"DOC1"},
+				 "message":{"documentWithCaptionMessage":{"message":{"documentMessage":
+				   {"mimetype":"image/png","fileLength":2000000,"caption":"foto em alta"}}}}}
+				""")).map(ImagemRecebida::legenda).contains("foto em alta");
+	}
+
+	@Test
+	void ignoraDocumentoQueNaoEhImagemFigurinhaEVideo() {
+		assertThat(imagem("""
+				{"key":{"remoteJid":"551188@s.whatsapp.net","id":"D"},"message":{"documentMessage":{"mimetype":"application/pdf"}}}
+				""")).isEmpty();
+		assertThat(imagem("""
+				{"key":{"remoteJid":"551188@s.whatsapp.net","id":"S"},"message":{"stickerMessage":{"mimetype":"image/webp"}}}
+				""")).isEmpty();
+		assertThat(imagem("""
+				{"key":{"remoteJid":"551188@s.whatsapp.net","id":"V"},"message":{"videoMessage":{"mimetype":"video/mp4"}}}
+				""")).isEmpty();
+	}
+
+	@Test
+	void ignoraImagemNossaDeGrupoOuSemInstancia() {
+		assertThat(imagem("""
+				{"key":{"remoteJid":"551188@s.whatsapp.net","id":"I","fromMe":true},"message":{"imageMessage":{}}}
+				""")).isEmpty();
+		assertThat(imagem("""
+				{"key":{"remoteJid":"1203630@g.us","id":"I"},"message":{"imageMessage":{}}}
+				""")).isEmpty();
+		assertThat(service.extrairImagem(new EvolutionWebhookEvento("messages.upsert", null, json.readTree("""
+				{"key":{"remoteJid":"551188@s.whatsapp.net","id":"I"},"message":{"imageMessage":{}}}
+				""")))).isEmpty();
+	}
+
+	@Test
+	void numeroDoRemetente() {
+		assertThat(service.numeroDoRemetente(new EvolutionWebhookEvento("messages.upsert", "ong", json.readTree("""
+				{"key":{"remoteJid":"5511999@s.whatsapp.net"}}
+				""")))).contains("5511999");
+		assertThat(service.numeroDoRemetente(new EvolutionWebhookEvento("connection.update", "ong",
+				json.readTree("{}")))).isEmpty();
 	}
 }
