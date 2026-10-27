@@ -43,11 +43,16 @@ public class AnuncioService {
 
 	@Transactional
 	public Optional<AnuncioResponse> criarDeMensagem(MensagemRecebida mensagem) {
+		return criarDeMensagem(mensagem, "", mensagem.texto());
+	}
+
+	@Transactional
+	public Optional<AnuncioResponse> criarDeMensagem(MensagemRecebida mensagem, String titulo, String descricao) {
 		if (mensagem.idWhatsapp() != null && repository.existsByIdWhatsapp(mensagem.idWhatsapp())) {
 			return Optional.empty();
 		}
 
-		Anuncio anuncio = new Anuncio("", mensagem.texto(), mensagem.numero(), mensagem.idWhatsapp());
+		Anuncio anuncio = new Anuncio(titulo, descricao, mensagem.numero(), mensagem.idWhatsapp());
 		return Optional.of(mapper.toResponse(repository.save(anuncio)));
 	}
 

@@ -51,21 +51,24 @@ class CriarAnuncioUseCaseTest {
 		processar(mensagemInicial);
 
 		verify(anuncioService, never()).criarDeMensagem(org.mockito.ArgumentMatchers.any());
-		verificarResposta(mensagemInicial, "Você gostaria de criar um anúncio? Responda sim ou não.");
+		verificarResposta(mensagemInicial, "Olá! 👋 Eu sou o Isac-plus, seu assistente para criação de anúncios.\n\nGostaria de criar um anúncio? Responda sim ou não para continuarmos.");
 	}
 
 	@Test
 	void respostaSimPedeTextoEProximaMensagemCriaAnuncio() {
 		MensagemRecebida inicial = mensagem("Olá");
 		MensagemRecebida confirmacao = mensagem("  SIm  ");
+		MensagemRecebida titulo = mensagem("Bicicleta em ótimo estado");
 		MensagemRecebida textoAnuncio = mensagem("Vendo bicicleta em bom estado");
 		processar(inicial);
 		processar(confirmacao);
+		processar(titulo);
 		processar(textoAnuncio);
 
-		verify(anuncioService).criarDeMensagem(textoAnuncio);
-		verificarResposta(confirmacao, "Envie o texto que deseja publicar como anúncio.");
-		verificarResposta(textoAnuncio, "Anúncio criado com sucesso!");
+		verify(anuncioService).criarDeMensagem(textoAnuncio, "Bicicleta em ótimo estado", "Vendo bicicleta em bom estado");
+		verificarResposta(confirmacao, "Que bom poder ajudar! 😊\n\nPor favor, informe o título que gostaria de usar no anúncio.");
+		verificarResposta(titulo, "Obrigado pelo título!\n\nAgora, por gentileza, envie o texto com os detalhes que deseja publicar no anúncio.");
+		verificarResposta(textoAnuncio, "Anúncio criado com sucesso! 🎉\n\nAgradeço por utilizar o Isac-plus. Se precisar de ajuda com outro anúncio, é só me chamar.");
 	}
 
 	@Test
@@ -77,7 +80,7 @@ class CriarAnuncioUseCaseTest {
 
 		verify(anuncioService, never()).criarDeMensagem(org.mockito.ArgumentMatchers.any());
 		verificarResposta(respostaNao,
-				"Tudo bem, não criarei um anúncio. Envie outra mensagem quando quiser começar.");
+				"Tudo bem, não criarei o anúncio. 😊\n\nQuando quiser começar, basta enviar uma nova mensagem. Estarei à disposição!");
 	}
 
 	@Test
@@ -87,7 +90,7 @@ class CriarAnuncioUseCaseTest {
 		processar(primeiraPessoa);
 		processar(segundaPessoa);
 
-		verificarResposta(segundaPessoa, "Você gostaria de criar um anúncio? Responda sim ou não.");
+		verificarResposta(segundaPessoa, "Olá! 👋 Eu sou o Isac-plus, seu assistente para criação de anúncios.\n\nGostaria de criar um anúncio? Responda sim ou não para continuarmos.");
 		verify(anuncioService, never()).criarDeMensagem(org.mockito.ArgumentMatchers.any());
 	}
 
@@ -100,22 +103,36 @@ class CriarAnuncioUseCaseTest {
 		processar(respostaInvalida);
 		processar(confirmacao);
 
-		verificarResposta(respostaInvalida, "Você gostaria de criar um anúncio? Responda sim ou não.");
-		verificarResposta(confirmacao, "Envie o texto que deseja publicar como anúncio.");
+		verificarResposta(respostaInvalida, "Olá! 👋 Eu sou o Isac-plus, seu assistente para criação de anúncios.\n\nGostaria de criar um anúncio? Responda sim ou não para continuarmos.");
+		verificarResposta(confirmacao, "Que bom poder ajudar! 😊\n\nPor favor, informe o título que gostaria de usar no anúncio.");
 	}
 
 	@Test
 	void aposCriarAnuncioProximaMensagemIniciaNovaConversa() {
 		MensagemRecebida inicial = mensagem("Oi");
 		MensagemRecebida confirmacao = mensagem("sim");
+		MensagemRecebida titulo = mensagem("Título");
 		MensagemRecebida texto = mensagem("Anúncio");
 		MensagemRecebida novaConversa = mensagem("Outro assunto");
 		processar(inicial);
 		processar(confirmacao);
+		processar(titulo);
 		processar(texto);
 		processar(novaConversa);
 
-		verificarResposta(novaConversa, "Você gostaria de criar um anúncio? Responda sim ou não.");
+		verificarResposta(novaConversa, "Olá! 👋 Eu sou o Isac-plus, seu assistente para criação de anúncios.\n\nGostaria de criar um anúncio? Responda sim ou não para continuarmos.");
+	}
+
+	@Test
+	void anuncioNaoECriadoAteReceberTituloETexto() {
+		MensagemRecebida inicial = mensagem("Oi");
+		MensagemRecebida confirmacao = mensagem("sim");
+		MensagemRecebida titulo = mensagem("Meu anúncio");
+		processar(inicial);
+		processar(confirmacao);
+		processar(titulo);
+
+		verify(anuncioService, never()).criarDeMensagem(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString());
 	}
 
 	@Test

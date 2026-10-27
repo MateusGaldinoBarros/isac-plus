@@ -22,10 +22,13 @@ public class CriarAnuncioUseCase {
 	private final EvolutionClient evolutionClient;
 	private final ConcurrentHashMap<Contato, EtapaConversa> conversas = new ConcurrentHashMap<>();
 
-	private static final String PERGUNTA_CONFIRMACAO = "Você gostaria de criar um anúncio? Responda sim ou não.";
-	private static final String PEDIDO_TEXTO = "Envie o texto que deseja publicar como anúncio.";
-	private static final String ANUNCIO_CRIADO = "Anúncio criado com sucesso!";
-	private static final String ANUNCIO_CANCELADO = "Tudo bem, não criarei um anúncio. Envie outra mensagem quando quiser começar.";
+	private static final String PERGUNTA_CONFIRMACAO = "Olá! 👋 Eu sou o Isac-plus, seu assistente para criação de anúncios.\n\nGostaria de criar um anúncio? Responda sim ou não para continuarmos.";
+	private static final String PEDIDO_TITULO = "Que bom poder ajudar! 😊\n\nPor favor, informe o título que gostaria de usar no anúncio.";
+	private static final String PEDIDO_TEXTO = "Obrigado pelo título!\n\nAgora, por gentileza, envie o texto com os detalhes que deseja publicar no anúncio.";
+	private static final String ANUNCIO_CRIADO = "Anúncio criado com sucesso! 🎉\n\nAgradeço por utilizar o Isac-plus. Se precisar de ajuda com outro anúncio, é só me chamar.";
+	private static final String ANUNCIO_CANCELADO = "Tudo bem, não criarei o anúncio. 😊\n\nQuando quiser começar, basta enviar uma nova mensagem. Estarei à disposição!";
+	private static final String PEDIDO_TITULO_NOVAMENTE = "Não consegui identificar um título nessa mensagem.\n\nPor favor, envie o título que deseja usar no anúncio.";
+	private static final String PEDIDO_TEXTO_NOVAMENTE = "Não consegui identificar o texto do anúncio nessa mensagem.\n\nPor favor, envie os detalhes que deseja publicar.";
 
 	public CriarAnuncioUseCase(WebhookService webhookService, AnuncioService anuncioService, EvolutionClient evolutionClient) {
 		this.webhookService = webhookService;
@@ -43,16 +46,16 @@ public class CriarAnuncioUseCase {
 		EtapaConversa etapa = conversas.get(contato);
 
 		if (etapa == null) {
-			conversas.put(contato, EtapaConversa.AGUARDANDO_CONFIRMACAO);
+			conversas.put(contato, new EtapaConversa(Fase.AGUARDANDO_CONFIRMACAO, null));
 			responder(mensagem, PERGUNTA_CONFIRMACAO);
 			return;
 		}
 
-		if (etapa == EtapaConversa.AGUARDANDO_CONFIRMACAO) {
+		if (etapa.fase() == Fase.AGUARDANDO_CONFIRMACAO) {
 			String resposta = normalizar(mensagem.texto());
 			if ("sim".equals(resposta)) {
-				conversas.put(contato, EtapaConversa.AGUARDANDO_TEXTO);
-				responder(mensagem, PEDIDO_TEXTO);
+				conversas.put(contato, new EtapaConversa(Fase.AGUARDANDO_TITULO, null));
+				responder(mensagem, PEDIDO_TITULO);
 			} else if ("nao".equals(resposta)) {
 				conversas.remove(contato);
 				responder(mensagem, ANUNCIO_CANCELADO);
@@ -62,7 +65,21 @@ public class CriarAnuncioUseCase {
 			return;
 		}
 
-		anuncioService.criarDeMensagem(mensagem);
+		if (etapa.fase() == Fase.AGUARDANDO_TITULO) {
+			if (mensagem.texto() == null || mensagem.texto().isBlank()) {
+				responder(mensagem, PEDIDO_TITULO_NOVAMENTE);
+				return;
+			}
+			conversas.put(contato, new EtapaConversa(Fase.AGUARDANDO_TEXTO, mensagem.texto().trim()));
+			responder(mensagem, PEDIDO_TEXTO);
+			return;
+		}
+
+		if (mensagem.texto() == null || mensagem.texto().isBlank()) {
+			responder(mensagem, PEDIDO_TEXTO_NOVAMENTE);
+			return;
+		}
+		anuncioService.criarDeMensagem(mensagem, etapa.titulo(), mensagem.texto().trim());
 		conversas.remove(contato);
 		responder(mensagem, ANUNCIO_CRIADO);
 	}
@@ -78,9 +95,13 @@ public class CriarAnuncioUseCase {
 		evolutionClient.enviarMensagem(mensagem.instancia(), resposta);
 	}
 
-	private enum EtapaConversa {
+	private enum Fase {
 		AGUARDANDO_CONFIRMACAO,
+		AGUARDANDO_TITULO,
 		AGUARDANDO_TEXTO
+	}
+
+	private record EtapaConversa(Fase fase, String titulo) {
 	}
 
 	private record Contato(String instancia, String numero) {
