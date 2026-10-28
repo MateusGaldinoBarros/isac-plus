@@ -34,7 +34,16 @@ public class WebhookService {
 	@Transactional
 	public Optional<MensagemRecebida> processar(EvolutionWebhookEvento evento) {
 		Optional<MensagemRecebida> mensagem = extrair(evento);
-		mensagem.ifPresent(this::salvar);
+		if (mensagem.isEmpty()) {
+			return Optional.empty();
+		}
+
+		MensagemRecebida recebida = mensagem.get();
+		if (recebida.idWhatsapp() != null && repository.existsByIdWhatsapp(recebida.idWhatsapp())) {
+			log.info("Mensagem {} ja estava salva, ignorando reenvio", recebida.idWhatsapp());
+			return Optional.empty();
+		}
+		salvar(recebida);
 		return mensagem;
 	}
 
@@ -101,10 +110,6 @@ public class WebhookService {
 	}
 
 	private void salvar(MensagemRecebida m) {
-		if (m.idWhatsapp() != null && repository.existsByIdWhatsapp(m.idWhatsapp())) {
-			log.info("Mensagem {} ja estava salva, ignorando reenvio", m.idWhatsapp());
-			return;
-		}
 		repository.save(new Mensagem(m.idWhatsapp(), m.instancia(), m.numero(), m.nome(), m.texto(), Instant.now()));
 		log.info("Mensagem salva de {} ({}): {}", m.numero(), m.nome(), m.texto());
 	}

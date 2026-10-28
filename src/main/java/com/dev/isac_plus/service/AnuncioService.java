@@ -55,10 +55,16 @@ public class AnuncioService {
 
 	@Transactional
 	public Optional<AnuncioResponse> criarDeMensagem(MensagemRecebida mensagem) {
+		return criarDeMensagem(mensagem, "", mensagem.texto());
+	}
+
+	@Transactional
+	public Optional<AnuncioResponse> criarDeMensagem(MensagemRecebida mensagem, String titulo, String descricao) {
 		if (mensagem.idWhatsapp() != null && repository.existsByIdWhatsapp(mensagem.idWhatsapp())) {
 			return Optional.empty();
 		}
 
+		Anuncio anuncio = new Anuncio(titulo, descricao, mensagem.numero(), mensagem.idWhatsapp());
 		// Fotos chegaram antes do texto: o texto completa o rascunho em vez de criar outro anuncio
 		Optional<Anuncio> rascunho = maisRecente(mensagem.numero()).filter(Anuncio::isRascunho);
 		if (rascunho.isPresent()) {

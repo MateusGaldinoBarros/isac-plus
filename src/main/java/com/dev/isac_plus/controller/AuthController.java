@@ -6,7 +6,6 @@ import com.dev.isac_plus.dto.RegisterDTO;
 import com.dev.isac_plus.model.Usuario;
 import com.dev.isac_plus.service.TokenService;
 import com.dev.isac_plus.service.UsuarioService;
-import org.apache.catalina.connector.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
