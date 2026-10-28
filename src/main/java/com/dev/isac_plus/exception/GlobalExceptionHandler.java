@@ -23,6 +23,12 @@ public class GlobalExceptionHandler {
 		return resposta(HttpStatus.NOT_FOUND, new ErroResponse(404, ex.getMessage()));
 	}
 
+	@ExceptionHandler(StorageException.class)
+	public ResponseEntity<ErroResponse> storageIndisponivel(StorageException ex) {
+		log.error("Storage indisponivel", ex);
+		return resposta(HttpStatus.SERVICE_UNAVAILABLE, new ErroResponse(503, "Imagem indisponivel no momento"));
+	}
+
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	public ResponseEntity<ErroResponse> validacao(MethodArgumentNotValidException ex) {
 		Map<String, String> campos = new LinkedHashMap<>();

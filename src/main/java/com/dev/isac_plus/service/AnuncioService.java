@@ -1,5 +1,7 @@
 package com.dev.isac_plus.service;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,22 +19,32 @@ import com.dev.isac_plus.repository.AnuncioRepository;
 @Service
 public class AnuncioService {
 
+	/**
+	 * Tempo em que fotos e texto do mesmo numero sao tratados como o mesmo anuncio,
+	 * contado a partir da criacao do anuncio.
+	 */
+	public static final Duration JANELA_AGRUPAMENTO = Duration.ofMinutes(10);
+
 	private final AnuncioRepository repository;
 	private final AnuncioMapper mapper;
+	private final Clock relogio;
 
-	public AnuncioService(AnuncioRepository repository, AnuncioMapper mapper) {
+	public AnuncioService(AnuncioRepository repository, AnuncioMapper mapper, Clock relogio) {
 		this.repository = repository;
 		this.mapper = mapper;
+		this.relogio = relogio;
 	}
 
+	/** Rascunhos ficam de fora: ainda nao tem descricao. */
 	@Transactional(readOnly = true)
 	public List<AnuncioResponse> listar() {
-		return repository.findAll().stream().map(mapper::toResponse).toList();
+		return repository.findByRascunhoFalse().stream().map(mapper::toResponse).toList();
 	}
 
 	@Transactional(readOnly = true)
 	public AnuncioResponse buscarPorId(Long id) {
-		return mapper.toResponse(buscarEntidade(id));
+		return mapper.toResponse(repository.findByIdAndRascunhoFalse(id)
+				.orElseThrow(() -> new RecursoNaoEncontradoException("Anuncio", id)));
 	}
 
 	@Transactional
@@ -53,7 +65,21 @@ public class AnuncioService {
 		}
 
 		Anuncio anuncio = new Anuncio(titulo, descricao, mensagem.numero(), mensagem.idWhatsapp());
+		// Fotos chegaram antes do texto: o texto completa o rascunho em vez de criar outro anuncio
+		Optional<Anuncio> rascunho = maisRecente(mensagem.numero()).filter(Anuncio::isRascunho);
+		if (rascunho.isPresent()) {
+			rascunho.get().publicarComDescricao(mensagem.texto(), mensagem.idWhatsapp());
+			return Optional.of(mapper.toResponse(repository.save(rascunho.get())));
+		}
+
+		Anuncio anuncio = new Anuncio("", mensagem.texto(), mensagem.numero(), mensagem.idWhatsapp());
 		return Optional.of(mapper.toResponse(repository.save(anuncio)));
+	}
+
+	/** Anuncio mais recente do numero dentro da janela de agrupamento. */
+	@Transactional(readOnly = true)
+	public Optional<Anuncio> maisRecente(String numero) {
+		return repository.maisRecenteDoNumeroDesde(numero, relogio.instant().minus(JANELA_AGRUPAMENTO));
 	}
 
 	@Transactional
