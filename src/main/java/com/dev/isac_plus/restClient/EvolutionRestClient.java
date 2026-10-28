@@ -8,11 +8,11 @@ import com.dev.isac_plus.dto.MensagemEnviadaDTO;
 import org.springframework.beans.factory.annotation.Qualifier;
 
 @Component 
-public class EvolutionClient {
+public class EvolutionRestClient {
     private final RestClient restClient;
 
-    public EvolutionClient(
-            @Qualifier("evolutionRestClient") RestClient evolutionRestClient) {
+    public EvolutionRestClient(
+            @Qualifier("evolutionHttpRestClient") RestClient evolutionRestClient) {
         this.restClient = evolutionRestClient;
     }
 

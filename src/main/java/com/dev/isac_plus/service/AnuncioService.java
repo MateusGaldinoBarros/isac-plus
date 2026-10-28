@@ -64,7 +64,7 @@ public class AnuncioService {
 			return Optional.empty();
 		}
 
-		Anuncio anuncio = new Anuncio(titulo, descricao, mensagem.numero(), mensagem.idWhatsapp());
+		
 		// Fotos chegaram antes do texto: o texto completa o rascunho em vez de criar outro anuncio
 		Optional<Anuncio> rascunho = maisRecente(mensagem.numero()).filter(Anuncio::isRascunho);
 		if (rascunho.isPresent()) {
@@ -72,7 +72,7 @@ public class AnuncioService {
 			return Optional.of(mapper.toResponse(repository.save(rascunho.get())));
 		}
 
-		Anuncio anuncio = new Anuncio("", mensagem.texto(), mensagem.numero(), mensagem.idWhatsapp());
+		Anuncio anuncio = new Anuncio(titulo, descricao, mensagem.numero(), mensagem.idWhatsapp());
 		return Optional.of(mapper.toResponse(repository.save(anuncio)));
 	}
 

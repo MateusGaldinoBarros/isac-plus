@@ -24,7 +24,7 @@ public class EvolutionClient {
 
 	private final RestClient http;
 
-	public EvolutionClient(@Qualifier("evolutionRestClient") RestClient http) {
+	public EvolutionClient(@Qualifier("evolutionHttpRestClient") RestClient http) {
 		this.http = http;
 	}
 

@@ -1,8 +1,10 @@
 package com.dev.isac_plus.useCase;
 
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -16,12 +18,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.transaction.support.TransactionOperations;
 
 import com.dev.isac_plus.dto.EvolutionWebhookEvento;
+import com.dev.isac_plus.dto.ImagemRecebida;
 import com.dev.isac_plus.dto.MensagemEnviadaDTO;
 import com.dev.isac_plus.dto.MensagemRecebida;
-import com.dev.isac_plus.restClient.EvolutionClient;
-import com.dev.isac_plus.dto.ImagemRecebida;
-import com.dev.isac_plus.dto.MensagemRecebida;
 import com.dev.isac_plus.model.MetadadosImagem;
+import com.dev.isac_plus.restClient.EvolutionRestClient;
 import com.dev.isac_plus.service.AnuncioService;
 import com.dev.isac_plus.service.RegistroImagemService;
 import com.dev.isac_plus.service.TravaPorNumero;
@@ -34,6 +35,7 @@ class CriarAnuncioUseCaseTest {
 
 	private static final String INSTANCIA = "ong";
 	private static final String NUMERO = "5511999";
+	private static final String PERGUNTA_CONFIRMACAO = "Olá! 👋 Eu sou o Isac-plus, seu assistente para criação de anúncios.\n\nGostaria de criar um anúncio? Responda sim ou não para continuarmos.";
 
 	@Mock
 	private WebhookService webhookService;
@@ -42,58 +44,44 @@ class CriarAnuncioUseCaseTest {
 	private AnuncioService anuncioService;
 
 	@Mock
-	private EvolutionClient evolutionClient;
+	private EvolutionRestClient evolutionClient;
+
+	@Mock
+	private RegistroImagemService registroImagemService;
 
 	private CriarAnuncioUseCase useCase;
 	private int idEvento;
 
 	@BeforeEach
 	void setUp() {
-		useCase = new CriarAnuncioUseCase(webhookService, anuncioService, evolutionClient);
+		useCase = new CriarAnuncioUseCase(webhookService, anuncioService, evolutionClient,
+				registroImagemService, new TravaPorNumero(), TransactionOperations.withoutTransaction());
 	}
 
 	@Test
 	void primeiraMensagemPerguntaSeQuerCriarAnuncioSemCriarUm() {
-		MensagemRecebida mensagemInicial = mensagem("Oi, quero divulgar algo");
-		processar(mensagemInicial);
-	private RegistroImagemService registroImagemService;
+		MensagemRecebida inicial = mensagem("Oi, quero divulgar algo");
+		processar(inicial);
 
-	private CriarAnuncioUseCase useCase;
-
-	private final EvolutionWebhookEvento evento = new EvolutionWebhookEvento("messages.upsert", "ong",
-			JsonMapper.builder().build().createObjectNode());
-
-	@BeforeEach
-	void setUp() {
-		useCase = new CriarAnuncioUseCase(webhookService, anuncioService, registroImagemService, new TravaPorNumero(),
-				TransactionOperations.withoutTransaction());
+		verificarResposta(inicial, PERGUNTA_CONFIRMACAO);
+		verify(anuncioService, never()).criarDeMensagem(any());
 	}
 
 	@Test
-	void criaAnuncioQuandoWebhookRetornaMensagemDeTexto() {
-		MensagemRecebida mensagem = new MensagemRecebida("ABC", "ong", "5511999", "Ana", "Vendo bicicleta");
-		when(webhookService.processar(evento)).thenReturn(Optional.of(mensagem));
-		when(webhookService.extrairImagem(evento)).thenReturn(Optional.empty());
-
-		verify(anuncioService, never()).criarDeMensagem(org.mockito.ArgumentMatchers.any());
-		verificarResposta(mensagemInicial, "Olá! 👋 Eu sou o Isac-plus, seu assistente para criação de anúncios.\n\nGostaria de criar um anúncio? Responda sim ou não para continuarmos.");
-	}
-
-	@Test
-	void respostaSimPedeTextoEProximaMensagemCriaAnuncio() {
+	void respostaSimPedeTituloETextoAntesDeCriarAnuncio() {
 		MensagemRecebida inicial = mensagem("Olá");
 		MensagemRecebida confirmacao = mensagem("  SIm  ");
 		MensagemRecebida titulo = mensagem("Bicicleta em ótimo estado");
-		MensagemRecebida textoAnuncio = mensagem("Vendo bicicleta em bom estado");
+		MensagemRecebida texto = mensagem("Vendo bicicleta em bom estado");
 		processar(inicial);
 		processar(confirmacao);
 		processar(titulo);
-		processar(textoAnuncio);
+		processar(texto);
 
-		verify(anuncioService).criarDeMensagem(textoAnuncio, "Bicicleta em ótimo estado", "Vendo bicicleta em bom estado");
+		verify(anuncioService).criarDeMensagem(texto, "Bicicleta em ótimo estado", "Vendo bicicleta em bom estado");
 		verificarResposta(confirmacao, "Que bom poder ajudar! 😊\n\nPor favor, informe o título que gostaria de usar no anúncio.");
 		verificarResposta(titulo, "Obrigado pelo título!\n\nAgora, por gentileza, envie o texto com os detalhes que deseja publicar no anúncio.");
-		verificarResposta(textoAnuncio, "Anúncio criado com sucesso! 🎉\n\nAgradeço por utilizar o Isac-plus. Se precisar de ajuda com outro anúncio, é só me chamar.");
+		verificarResposta(texto, "Anúncio criado com sucesso! 🎉\n\nAgradeço por utilizar o Isac-plus. Se precisar de ajuda com outro anúncio, é só me chamar.");
 	}
 
 	@Test
@@ -103,9 +91,8 @@ class CriarAnuncioUseCaseTest {
 		processar(inicial);
 		processar(respostaNao);
 
-		verify(anuncioService, never()).criarDeMensagem(org.mockito.ArgumentMatchers.any());
-		verificarResposta(respostaNao,
-				"Tudo bem, não criarei o anúncio. 😊\n\nQuando quiser começar, basta enviar uma nova mensagem. Estarei à disposição!");
+		verify(anuncioService, never()).criarDeMensagem(any());
+		verificarResposta(respostaNao, "Tudo bem, não criarei o anúncio. 😊\n\nQuando quiser começar, basta enviar uma nova mensagem. Estarei à disposição!");
 	}
 
 	@Test
@@ -115,8 +102,9 @@ class CriarAnuncioUseCaseTest {
 		processar(primeiraPessoa);
 		processar(segundaPessoa);
 
-		verificarResposta(segundaPessoa, "Olá! 👋 Eu sou o Isac-plus, seu assistente para criação de anúncios.\n\nGostaria de criar um anúncio? Responda sim ou não para continuarmos.");
-		verify(anuncioService, never()).criarDeMensagem(org.mockito.ArgumentMatchers.any());
+		verificarResposta(primeiraPessoa, PERGUNTA_CONFIRMACAO);
+		verificarResposta(segundaPessoa, PERGUNTA_CONFIRMACAO);
+		verify(anuncioService, never()).criarDeMensagem(any());
 	}
 
 	@Test
@@ -128,7 +116,7 @@ class CriarAnuncioUseCaseTest {
 		processar(respostaInvalida);
 		processar(confirmacao);
 
-		verificarResposta(respostaInvalida, "Olá! 👋 Eu sou o Isac-plus, seu assistente para criação de anúncios.\n\nGostaria de criar um anúncio? Responda sim ou não para continuarmos.");
+		verificarResposta(respostaInvalida, PERGUNTA_CONFIRMACAO);
 		verificarResposta(confirmacao, "Que bom poder ajudar! 😊\n\nPor favor, informe o título que gostaria de usar no anúncio.");
 	}
 
@@ -145,32 +133,57 @@ class CriarAnuncioUseCaseTest {
 		processar(texto);
 		processar(novaConversa);
 
-		verificarResposta(novaConversa, "Olá! 👋 Eu sou o Isac-plus, seu assistente para criação de anúncios.\n\nGostaria de criar um anúncio? Responda sim ou não para continuarmos.");
+		verificarResposta(novaConversa, PERGUNTA_CONFIRMACAO);
 	}
 
 	@Test
 	void anuncioNaoECriadoAteReceberTituloETexto() {
-		MensagemRecebida inicial = mensagem("Oi");
-		MensagemRecebida confirmacao = mensagem("sim");
-		MensagemRecebida titulo = mensagem("Meu anúncio");
-		processar(inicial);
-		processar(confirmacao);
-		processar(titulo);
+		processar(mensagem("Oi"));
+		processar(mensagem("sim"));
+		processar(mensagem("Meu anúncio"));
 
-		verify(anuncioService, never()).criarDeMensagem(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString());
+		verify(anuncioService, never()).criarDeMensagem(any(), anyString(), anyString());
 	}
 
 	@Test
 	void eventoIgnoradoNaoEnviaRespostaNemCriaAnuncio() {
-		EvolutionWebhookEvento evento = new EvolutionWebhookEvento("contacts.upsert", INSTANCIA,
-				JsonMapper.builder().build().createObjectNode());
+		EvolutionWebhookEvento evento = evento("contacts.upsert", INSTANCIA);
+		when(webhookService.numeroDoRemetente(evento)).thenReturn(Optional.empty());
+
+		useCase.executar(evento);
+
+		verify(anuncioService, never()).criarDeMensagem(any());
+		verify(evolutionClient, never()).enviarMensagem(anyString(), any(MensagemEnviadaDTO.class));
+		verify(registroImagemService, never()).registrar(any());
+	}
+
+	@Test
+	void imagemComLegendaVaiParaRegistroDeImagemSemCriarAnuncioDeTextoSeparado() {
+		EvolutionWebhookEvento evento = evento("messages.upsert", INSTANCIA);
+		ImagemRecebida imagem = new ImagemRecebida("IMG", INSTANCIA, NUMERO, "Vendo bike", null,
+				new MetadadosImagem("image/jpeg", 1L, null, null), "{}");
+		when(webhookService.numeroDoRemetente(evento)).thenReturn(Optional.of(NUMERO));
+		when(webhookService.extrairImagem(evento)).thenReturn(Optional.of(imagem));
+
+		useCase.executar(evento);
+
+		verify(registroImagemService).registrar(imagem);
+		verify(anuncioService, never()).criarDeMensagem(any());
+		verify(evolutionClient, never()).enviarMensagem(anyString(), any(MensagemEnviadaDTO.class));
+	}
+
+	@Test
+	void mensagemIgnoradaNaoCriaAnuncioNemRegistraImagem() {
+		EvolutionWebhookEvento evento = evento("messages.upsert", INSTANCIA);
+		when(webhookService.numeroDoRemetente(evento)).thenReturn(Optional.of(NUMERO));
+		when(webhookService.extrairImagem(evento)).thenReturn(Optional.empty());
 		when(webhookService.processar(evento)).thenReturn(Optional.empty());
 
 		useCase.executar(evento);
 
-		verify(anuncioService, never()).criarDeMensagem(org.mockito.ArgumentMatchers.any());
-		verify(evolutionClient, never()).enviarMensagem(org.mockito.ArgumentMatchers.anyString(),
-				org.mockito.ArgumentMatchers.any(MensagemEnviadaDTO.class));
+		verify(anuncioService, never()).criarDeMensagem(any());
+		verify(registroImagemService, never()).registrar(any());
+		verify(evolutionClient, never()).enviarMensagem(anyString(), any(MensagemEnviadaDTO.class));
 	}
 
 	private MensagemRecebida mensagem(String texto) {
@@ -182,43 +195,19 @@ class CriarAnuncioUseCaseTest {
 	}
 
 	private void processar(MensagemRecebida mensagem) {
-		var data = JsonMapper.builder().build().createObjectNode();
-		data.put("testId", mensagem.idWhatsapp());
-		EvolutionWebhookEvento evento = new EvolutionWebhookEvento("messages.upsert", mensagem.instancia(),
-				data);
+		EvolutionWebhookEvento evento = evento("messages.upsert", mensagem.instancia());
+		when(webhookService.numeroDoRemetente(evento)).thenReturn(Optional.of(mensagem.numero()));
+		when(webhookService.extrairImagem(evento)).thenReturn(Optional.empty());
 		when(webhookService.processar(evento)).thenReturn(Optional.of(mensagem));
 		useCase.executar(evento);
 	}
 
+	private EvolutionWebhookEvento evento(String tipo, String instancia) {
+		return new EvolutionWebhookEvento(tipo, instancia, JsonMapper.builder().build().createObjectNode());
+	}
+
 	private void verificarResposta(MensagemRecebida destinatario, String texto) {
-		verify(evolutionClient).enviarMensagem(eq(destinatario.instancia()),
+		verify(evolutionClient, atLeastOnce()).enviarMensagem(eq(destinatario.instancia()),
 				eq(new MensagemEnviadaDTO(destinatario.numero(), texto)));
-		verify(anuncioService).criarDeMensagem(mensagem);
-		verify(registroImagemService, never()).registrar(any());
-	}
-
-	@Test
-	void imagemComLegendaVaiParaORegistroDeImagemENaoCriaAnuncioDeTextoSeparado() {
-		ImagemRecebida imagem = new ImagemRecebida("IMG", "ong", "5511999", "Vendo bike", null,
-				new MetadadosImagem("image/jpeg", 1L, null, null), "{}");
-		when(webhookService.processar(evento))
-				.thenReturn(Optional.of(new MensagemRecebida("IMG", "ong", "5511999", "Ana", "Vendo bike")));
-		when(webhookService.extrairImagem(evento)).thenReturn(Optional.of(imagem));
-
-		useCase.executar(evento);
-
-		verify(registroImagemService).registrar(imagem);
-		verify(anuncioService, never()).criarDeMensagem(any());
-	}
-
-	@Test
-	void naoFazNadaQuandoWebhookIgnoraEvento() {
-		when(webhookService.processar(evento)).thenReturn(Optional.empty());
-		when(webhookService.extrairImagem(evento)).thenReturn(Optional.empty());
-
-		useCase.executar(evento);
-
-		verify(anuncioService, never()).criarDeMensagem(any());
-		verify(registroImagemService, never()).registrar(any());
 	}
 }

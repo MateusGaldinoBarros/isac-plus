@@ -13,7 +13,7 @@ import org.springframework.web.client.RestClient;
 public class EvolutionConfig {
 
 	@Bean
-	public RestClient evolutionRestClient(EvolutionProperties props) {
+	public RestClient evolutionHttpRestClient(EvolutionProperties props) {
 		return configurar(RestClient.builder(), props).build();
 	}
 
