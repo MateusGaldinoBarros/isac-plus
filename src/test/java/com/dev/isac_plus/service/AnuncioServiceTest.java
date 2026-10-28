@@ -3,10 +3,14 @@ package com.dev.isac_plus.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
@@ -31,16 +35,18 @@ class AnuncioServiceTest {
 	@Mock
 	private AnuncioRepository repository;
 
+	private static final Instant AGORA = Instant.parse("2026-10-27T12:00:00Z");
+
 	private AnuncioService service;
 
 	@BeforeEach
 	void setUp() {
-		service = new AnuncioService(repository, new AnuncioMapper());
+		service = new AnuncioService(repository, new AnuncioMapper(), Clock.fixed(AGORA, ZoneOffset.UTC));
 	}
 
 	@Test
 	void listarConverteTodosParaResponse() {
-		when(repository.findAll()).thenReturn(List.of(new Anuncio("Bike", "Usada", "1"), new Anuncio("Moto", null, "2")));
+		when(repository.findByRascunhoFalse()).thenReturn(List.of(new Anuncio("Bike", "Usada", "1"), new Anuncio("Moto", null, "2")));
 
 		List<AnuncioResponse> resultado = service.listar();
 
@@ -49,14 +55,14 @@ class AnuncioServiceTest {
 
 	@Test
 	void buscarPorIdRetornaOAnuncio() {
-		when(repository.findById(1L)).thenReturn(Optional.of(new Anuncio("Bike", "Usada", "1")));
+		when(repository.findByIdAndRascunhoFalse(1L)).thenReturn(Optional.of(new Anuncio("Bike", "Usada", "1")));
 
 		assertThat(service.buscarPorId(1L).titulo()).isEqualTo("Bike");
 	}
 
 	@Test
-	void buscarPorIdInexistenteLancaExcecao() {
-		when(repository.findById(99L)).thenReturn(Optional.empty());
+	void buscarPorIdInexistenteOuRascunhoLancaExcecao() {
+		when(repository.findByIdAndRascunhoFalse(99L)).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.buscarPorId(99L))
 				.isInstanceOf(RecursoNaoEncontradoException.class)
@@ -89,6 +95,36 @@ class AnuncioServiceTest {
 		assertThat(captor.getValue().getContato()).isEqualTo("5511999");
 		assertThat(captor.getValue().getIdWhatsapp()).isEqualTo("ABC");
 		assertThat(resposta.titulo()).isEmpty();
+	}
+
+	@Test
+	void textoDepoisDasFotosCompletaORascunhoEmVezDeCriarOutroAnuncio() {
+		Anuncio rascunho = Anuncio.rascunho("5511999");
+		when(repository.maisRecenteDoNumeroDesde(eq("5511999"), eq(AGORA.minus(AnuncioService.JANELA_AGRUPAMENTO))))
+				.thenReturn(Optional.of(rascunho));
+		when(repository.save(rascunho)).thenReturn(rascunho);
+
+		service.criarDeMensagem(new MensagemRecebida("TXT", "ong", "5511999", "Ana", "Vendo bicicleta"));
+
+		assertThat(rascunho.isRascunho()).isFalse();
+		assertThat(rascunho.getDescricao()).isEqualTo("Vendo bicicleta");
+		assertThat(rascunho.getIdWhatsapp()).isEqualTo("TXT");
+		verify(repository).save(rascunho);
+	}
+
+	@Test
+	void textoComAnuncioRecentePublicadoCriaOutroAnuncio() {
+		Anuncio publicado = new Anuncio("", "Vendo bike", "5511999");
+		when(repository.maisRecenteDoNumeroDesde(eq("5511999"), any())).thenReturn(Optional.of(publicado));
+		when(repository.save(any(Anuncio.class))).thenAnswer(inv -> inv.getArgument(0));
+
+		service.criarDeMensagem(new MensagemRecebida("TXT", "ong", "5511999", "Ana", "Vendo moto"));
+
+		ArgumentCaptor<Anuncio> captor = ArgumentCaptor.forClass(Anuncio.class);
+		verify(repository).save(captor.capture());
+		assertThat(captor.getValue()).isNotSameAs(publicado);
+		assertThat(captor.getValue().getDescricao()).isEqualTo("Vendo moto");
+		assertThat(publicado.getDescricao()).isEqualTo("Vendo bike");
 	}
 
 	@Test
