@@ -40,8 +40,9 @@ public class EstadoAguardandoTexto implements EstadoConversaI{
                 contexto.getTitulo(),
                 mensagem.texto().trim());
 
-        contexto.removerContexto();
-        responder(mensagem, ANUNCIO_CRIADO);
+
+            contexto.encerrar();
+            responder(mensagem, ANUNCIO_CRIADO);
     }
 
     private void responder(MensagemRecebida mensagem, String texto) {

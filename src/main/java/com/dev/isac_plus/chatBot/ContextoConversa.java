@@ -1,8 +1,11 @@
 package com.dev.isac_plus.chatBot;
+import com.dev.isac_plus.dto.MensagemRecebida;
 
 public class ContextoConversa {
     private EstadoConversaI estadoAtual;
     private String titulo;
+    public boolean encerrada;
+    
 
     public ContextoConversa(EstadoConversaI estadoInicial, String titulo) {
         this.estadoAtual = estadoInicial;
@@ -13,9 +16,7 @@ public class ContextoConversa {
         this.estadoAtual = novoEstado;
     }
 
-    public void removerContexto() {
-        this.estadoAtual = null;
-    }
+    
     
     public EstadoConversaI getEstadoAtual() {
         return estadoAtual;
@@ -27,5 +28,19 @@ public class ContextoConversa {
 
     public void setTitulo(String titulo) {
         this.titulo = titulo;
+    }
+
+    public boolean isEncerrada() {
+        return encerrada;
+    }
+
+    public void encerrar() {
+        this.encerrada = true;
+    }
+
+    public void processarMensagem(MensagemRecebida mensagemRecebida) {
+        if (estadoAtual != null) {
+            estadoAtual.processarMensagem(mensagemRecebida, this);
+        }
     }
 }

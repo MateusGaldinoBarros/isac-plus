@@ -38,7 +38,7 @@ public class EstadoAguardandoConfirmacao implements EstadoConversaI {
                 
 
             } else if ("nao".equals(resposta)) {
-                contexto.removerContexto();
+                contexto.encerrar();
                 responder(mensagem, ANUNCIO_CANCELADO);
 
             } else {
