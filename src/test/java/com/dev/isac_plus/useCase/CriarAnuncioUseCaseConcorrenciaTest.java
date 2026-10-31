@@ -23,10 +23,16 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.dev.isac_plus.dto.EvolutionWebhookEvento;
+import com.dev.isac_plus.chatBot.EstadoAguardandoConfirmacao;
+import com.dev.isac_plus.chatBot.EstadoAguardandoTexto;
+import com.dev.isac_plus.chatBot.EstadoAguardandoTitulo;
+import com.dev.isac_plus.chatBot.EstadoInicial;
+import com.dev.isac_plus.config.EvolutionConfig;
 import com.dev.isac_plus.mapper.AnuncioMapper;
 import com.dev.isac_plus.repository.AnuncioRepository;
 import com.dev.isac_plus.repository.ImagemAnuncioRepository;
 import com.dev.isac_plus.repository.MensagemRepository;
+import com.dev.isac_plus.restClient.EvolutionRestClient;
 import com.dev.isac_plus.service.AnuncioService;
 import com.dev.isac_plus.service.RegistroImagemService;
 import com.dev.isac_plus.service.TravaPorNumero;
@@ -42,7 +48,9 @@ import tools.jackson.databind.json.JsonMapper;
  */
 @DataJpaTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
-@Import({ CriarAnuncioUseCase.class, WebhookService.class, AnuncioService.class, AnuncioMapper.class,
+@Import({ CriarAnuncioUseCase.class, EstadoInicial.class, EstadoAguardandoConfirmacao.class,
+		EstadoAguardandoTitulo.class, EstadoAguardandoTexto.class, EvolutionRestClient.class, EvolutionConfig.class,
+		WebhookService.class, AnuncioService.class, AnuncioMapper.class,
 		RegistroImagemService.class, ValidadorImagem.class, TravaPorNumero.class,
 		CriarAnuncioUseCaseConcorrenciaTest.Config.class })
 class CriarAnuncioUseCaseConcorrenciaTest {
