@@ -16,11 +16,12 @@ public class EstadoAguardandoConfirmacao implements EstadoConversaI {
             + "Quando quiser começar, basta enviar uma nova mensagem. "
             + "Estarei à disposição!";
     private static final String PEDIDO_CONFIRMACAO = "Gostaria de criar um anúncio? Responda sim ou não para continuarmos.";
-
+    private static final String PEDIDO_TITULO = "Que bom poder ajudar! 😊\n\n"
+            + "Por favor, informe o título que gostaria de usar no anúncio.";
     private final EvolutionRestClient evolutionClient;
     private final EstadoAguardandoTitulo proximoEstado;
 
-    public EstadoAguardandoConfirmacao(EvolutionRestClient evolutionClient, EstadoAguardandoTitulo proximoEstado, EstadoInicial estadoInicial) {
+    public EstadoAguardandoConfirmacao(EvolutionRestClient evolutionClient, EstadoAguardandoTitulo proximoEstado) {
         this.evolutionClient = evolutionClient;
         this.proximoEstado = proximoEstado;
     }
@@ -28,11 +29,11 @@ public class EstadoAguardandoConfirmacao implements EstadoConversaI {
     
     
     public void processarMensagem(MensagemRecebida mensagem, ContextoConversa contexto) {
-        responder(mensagem, PEDIDO_CONFIRMACAO);
         
         String resposta = normalizar(mensagem.texto());
 
             if ("sim".equals(resposta)) {
+                responder(mensagem, PEDIDO_TITULO);
                 contexto.avancarPara(proximoEstado);
 
                 

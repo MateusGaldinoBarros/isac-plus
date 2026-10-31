@@ -7,7 +7,8 @@ import com.dev.isac_plus.restClient.EvolutionRestClient;;
 
 @Component 
 public class EstadoInicial implements EstadoConversaI { 
-    private final String mensagemBoasVindas = "Olá! 👋 Eu sou o Isac-plus, seu assistente para criação de anúncios";                                           
+    private final String mensagemBoasVindas = "Olá! 👋 Eu sou o Isac-plus, seu assistente para criação de anúncios";
+    private static final String PEDIDO_CONFIRMACAO = "Gostaria de criar um anúncio? Responda sim ou não para continuarmos.";
     private final EvolutionRestClient evolutionClient;
     private final EstadoAguardandoConfirmacao proximoEstado;;
 
@@ -19,6 +20,7 @@ public class EstadoInicial implements EstadoConversaI {
     @Override 
     public void processarMensagem(MensagemRecebida mensagemRecebida, ContextoConversa contexto) {
         responder(mensagemRecebida, mensagemBoasVindas);
+        responder(mensagemRecebida, PEDIDO_CONFIRMACAO);
         
         contexto.avancarPara(proximoEstado);
     }

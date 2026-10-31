@@ -9,9 +9,7 @@ import com.dev.isac_plus.service.AnuncioService;
 
 @Component 
 public class EstadoAguardandoTexto implements EstadoConversaI{
-    private static final String PEDIDO_TEXTO = "Obrigado pelo título!\n\n"
-            + "Agora, por gentileza, envie o texto com os detalhes "
-            + "que deseja publicar no anúncio.";
+    
     private static final String ANUNCIO_CRIADO = "Anúncio criado com sucesso! 🎉\n\n"
             + "Agradeço por utilizar o Isac-plus. Se precisar de ajuda "
             + "com outro anúncio, é só me chamar.";
@@ -27,8 +25,6 @@ public class EstadoAguardandoTexto implements EstadoConversaI{
     }
     
     public void processarMensagem(MensagemRecebida mensagem, ContextoConversa contexto) {
-        responder(mensagem, PEDIDO_TEXTO);
-
         if (mensagem.texto() == null
                 || mensagem.texto().isBlank()) {
             responder(mensagem, PEDIDO_TEXTO_NOVAMENTE);
