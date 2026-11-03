@@ -1,11 +1,14 @@
-
 FROM eclipse-temurin:17-jdk AS build
 
 WORKDIR /app
 
-COPY . .
+# Primeiro so o que define as dependencias: enquanto o pom.xml nao mudar, essa camada vem do cache
+COPY mvnw pom.xml ./
+COPY .mvn .mvn
+RUN chmod +x mvnw && ./mvnw -B dependency:go-offline
 
-RUN chmod +x mvnw && ./mvnw package -DskipTests
+COPY src src
+RUN ./mvnw -B package -DskipTests
 
 FROM eclipse-temurin:17-jre
 
