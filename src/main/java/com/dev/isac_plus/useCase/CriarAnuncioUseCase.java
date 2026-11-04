@@ -61,21 +61,18 @@ public class CriarAnuncioUseCase {
     }
 
     private void processarEvento(EvolutionWebhookEvento evento) {
-        Optional<ImagemRecebida> imagem =
-                webhookService.extrairImagem(evento);
+        Optional<ImagemRecebida> imagem = webhookService.extrairImagem(evento);
 
         if (imagem.isPresent()) {
             registroImagemService.registrar(imagem.get());
             return;
         }
 
-        webhookService.processar(evento)
-                .ifPresent(this::processarMensagem);
+        webhookService.processar(evento).ifPresent(this::processarMensagem);
     }
 
     private void processarMensagem(MensagemRecebida mensagem) {
-        Contato contato =
-                new Contato(mensagem.instancia(), mensagem.numero());
+        Contato contato = new Contato(mensagem.instancia(), mensagem.numero());
 
         ContextoConversa contexto = conversas.computeIfAbsent(
                 contato,
