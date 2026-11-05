@@ -1,5 +1,8 @@
 package com.dev.isac_plus.controller;
 
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -12,7 +15,7 @@ import com.dev.isac_plus.useCase.CriarAnuncioUseCase;
 @RestController
 @RequestMapping("/webhook")
 public class WebhookController {
-
+	private static final Logger log = LoggerFactory.getLogger(WebhookController.class);
 	private final CriarAnuncioUseCase useCase;
 
 	public WebhookController(CriarAnuncioUseCase useCase) {
@@ -22,6 +25,7 @@ public class WebhookController {
 	// Responde 200 mesmo para eventos ignorados, senao a Evolution fica reenviando.
 	@PostMapping("/evolution")
 	public ResponseEntity<Void> receber(@RequestBody EvolutionWebhookEvento evento) {
+		log.info("evento recebido {}", evento);
 		useCase.executar(evento);
 		return ResponseEntity.ok().build();
 	}

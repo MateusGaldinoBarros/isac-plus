@@ -21,11 +21,11 @@ import org.springframework.transaction.support.TransactionOperations;
 
 import com.dev.isac_plus.chatBot.ContextoConversa;
 import com.dev.isac_plus.chatBot.EstadoInicial;
+import com.dev.isac_plus.chatBot.EstadoAguardandoTexto;
 import com.dev.isac_plus.dto.EvolutionWebhookEvento;
 import com.dev.isac_plus.dto.ImagemRecebida;
 import com.dev.isac_plus.dto.MensagemRecebida;
 import com.dev.isac_plus.model.MetadadosImagem;
-import com.dev.isac_plus.service.RegistroImagemService;
 import com.dev.isac_plus.service.TravaPorNumero;
 import com.dev.isac_plus.service.WebhookService;
 
@@ -41,7 +41,7 @@ class CriarAnuncioUseCaseTest {
 	private WebhookService webhookService;
 
 	@Mock
-	private RegistroImagemService registroImagemService;
+	private EstadoAguardandoTexto estadoAguardandoTexto;
 
 	@Mock
 	private EstadoInicial estadoInicial;
@@ -50,8 +50,8 @@ class CriarAnuncioUseCaseTest {
 
 	@BeforeEach
 	void setUp() {
-		useCase = new CriarAnuncioUseCase(webhookService, registroImagemService,
-				new TravaPorNumero(), TransactionOperations.withoutTransaction(), estadoInicial);
+		useCase = new CriarAnuncioUseCase(webhookService,
+				new TravaPorNumero(), TransactionOperations.withoutTransaction(), estadoInicial, estadoAguardandoTexto);
 	}
 
 	@Test
@@ -61,7 +61,7 @@ class CriarAnuncioUseCaseTest {
 
 		useCase.executar(evento);
 
-		verifyNoInteractions(registroImagemService, estadoInicial);
+		verifyNoInteractions(estadoAguardandoTexto, estadoInicial);
 		verify(webhookService, never()).extrairImagem(evento);
 		verify(webhookService, never()).processar(evento);
 	}
@@ -76,7 +76,7 @@ class CriarAnuncioUseCaseTest {
 
 		useCase.executar(evento);
 
-		verify(registroImagemService).registrar(imagem);
+		verify(estadoAguardandoTexto).processarImagem(eq(imagem), any(ContextoConversa.class));
 		verify(webhookService, never()).processar(evento);
 		verifyNoInteractions(estadoInicial);
 	}
@@ -92,7 +92,7 @@ class CriarAnuncioUseCaseTest {
 		useCase.executar(evento);
 
 		verify(estadoInicial).processarMensagem(eq(mensagem), any(ContextoConversa.class));
-		verifyNoInteractions(registroImagemService);
+		verifyNoInteractions(estadoAguardandoTexto);
 	}
 
 	@Test

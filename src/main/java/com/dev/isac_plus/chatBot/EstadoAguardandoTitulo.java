@@ -11,8 +11,6 @@ import com.dev.isac_plus.restClient.EvolutionRestClient;
 public class EstadoAguardandoTitulo implements EstadoConversaI {
     private static final String PEDIDO_TITULO_NOVAMENTE = "Não consegui identificar um título nessa mensagem.\n\n"
             + "Por favor, envie o título que deseja usar no anúncio.";
-    private static final String PEDIDO_TITULO = "Que bom poder ajudar! 😊\n\n"
-            + "Por favor, informe o título que gostaria de usar no anúncio.";
     private static final String PEDIDO_TEXTO = "Obrigado pelo título!\n\n"
             + "Agora, por gentileza, envie o texto com os detalhes "
             + "que deseja publicar no anúncio.";

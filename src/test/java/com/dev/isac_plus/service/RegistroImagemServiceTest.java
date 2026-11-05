@@ -1,6 +1,7 @@
 package com.dev.isac_plus.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
 
 import java.time.Duration;
 import java.util.List;
@@ -12,9 +13,13 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import com.dev.isac_plus.dto.ImagemRecebida;
 import com.dev.isac_plus.dto.MensagemRecebida;
+import com.dev.isac_plus.dto.MensagemEnviadaDTO;
+import com.dev.isac_plus.chatBot.ContextoConversa;
+import com.dev.isac_plus.chatBot.EstadoAguardandoTexto;
 import com.dev.isac_plus.mapper.AnuncioMapper;
 import com.dev.isac_plus.model.Anuncio;
 import com.dev.isac_plus.model.ImagemAnuncio;
@@ -22,6 +27,7 @@ import com.dev.isac_plus.model.MetadadosImagem;
 import com.dev.isac_plus.model.StatusImagem;
 import com.dev.isac_plus.repository.AnuncioRepository;
 import com.dev.isac_plus.repository.ImagemAnuncioRepository;
+import com.dev.isac_plus.restClient.EvolutionRestClient;
 import com.dev.isac_plus.support.RelogioDeTeste;
 
 import jakarta.persistence.EntityManager;
@@ -31,7 +37,7 @@ import jakarta.persistence.EntityManager;
  * Cada teste simula a sequencia de mensagens que uma pessoa manda.
  */
 @DataJpaTest
-@Import({ RegistroImagemService.class, AnuncioService.class, AnuncioMapper.class, ValidadorImagem.class,
+@Import({ RegistroImagemService.class, EstadoAguardandoTexto.class, AnuncioService.class, AnuncioMapper.class, ValidadorImagem.class,
 		RegistroImagemServiceTest.Relogio.class })
 class RegistroImagemServiceTest {
 
@@ -46,7 +52,10 @@ class RegistroImagemServiceTest {
 	}
 
 	@Autowired
-	private RegistroImagemService registro;
+	private EstadoAguardandoTexto estadoAguardandoTexto;
+
+	@MockitoBean
+	private EvolutionRestClient evolutionClient;
 
 	@Autowired
 	private AnuncioService anuncioService;
@@ -214,15 +223,15 @@ class RegistroImagemServiceTest {
 	@Test
 	void reenvioDoMesmoWebhookNaoDuplica() {
 		ImagemRecebida img = recebida("REPETIDA", null, null, NUMERO, "image/jpeg");
-		registro.registrar(img);
-		assertThat(registro.registrar(img)).isEmpty();
+		processarImagem(img);
+		assertThat(processarImagem(img)).isEmpty();
 
 		assertThat(imagens.count()).isEqualTo(1);
 	}
 
 	@Test
 	void tipoNaoAceitoFicaRejeitadoComOMotivo() {
-		ImagemAnuncio img = registro.registrar(recebida("GIF", null, null, NUMERO, "image/gif")).orElseThrow();
+		ImagemAnuncio img = processarImagem(recebida("GIF", null, null, NUMERO, "image/gif")).orElseThrow();
 
 		assertThat(img.getStatus()).isEqualTo(StatusImagem.REJEITADA);
 		assertThat(img.getErro()).contains("image/gif");
@@ -241,6 +250,20 @@ class RegistroImagemServiceTest {
 				.allSatisfy(i -> assertThat(i.getErro()).contains("maximo"));
 	}
 
+	@Test
+	void fotoComLegendaFinalizaAConversaEConfirmaComoMensagemDeTexto() {
+		ContextoConversa contexto = new ContextoConversa(estadoAguardandoTexto, "");
+
+		estadoAguardandoTexto.processarImagem(
+				recebida("IMG_LEGENDA", "Vendo moto", null, NUMERO, "image/jpeg"), contexto);
+
+		assertThat(contexto.isEncerrada()).isTrue();
+		verify(evolutionClient).enviarMensagem("ong", new MensagemEnviadaDTO(NUMERO,
+				"Anúncio criado com sucesso! 🎉\n\n"
+						+ "Agradeço por utilizar o Isac-plus. Se precisar de ajuda "
+						+ "com outro anúncio, é só me chamar."));
+	}
+
 	// ---------- ajudantes ----------
 
 	private void texto(String texto) {
@@ -253,8 +276,13 @@ class RegistroImagemServiceTest {
 	}
 
 	private void foto(String legenda, String album, String numero) {
-		registro.registrar(recebida("IMG" + (++sequencia), legenda, album, numero, "image/jpeg"));
+		processarImagem(recebida("IMG" + (++sequencia), legenda, album, numero, "image/jpeg"));
 		em.flush();
+	}
+
+	private java.util.Optional<ImagemAnuncio> processarImagem(ImagemRecebida imagem) {
+		ContextoConversa contexto = new ContextoConversa(estadoAguardandoTexto, "");
+		return estadoAguardandoTexto.processarImagem(imagem, contexto);
 	}
 
 	private ImagemRecebida recebida(String id, String legenda, String album, String numero, String tipo) {
