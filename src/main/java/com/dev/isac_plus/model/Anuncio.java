@@ -10,6 +10,8 @@ import org.hibernate.annotations.BatchSize;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -20,113 +22,133 @@ import jakarta.persistence.PrePersist;
 @Entity
 public class Anuncio {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-	private String titulo;
+    private String titulo;
 
-	private String descricao;
+    private String descricao;
 
-	private String contato;
+    private String contato;
 
-	@Column(unique = true)
-	private String idWhatsapp;
+    @Enumerated(EnumType.STRING)
+    private Categoria categoria;
 
-	// Anuncio que chegou so com fotos; fica fora da listagem ate a pessoa mandar o texto.
-	// O default preenche as linhas que ja existiam quando a coluna foi criada.
-	@Column(columnDefinition = "boolean default false not null")
-	private boolean rascunho;
+    @Column(unique = true)
+    private String idWhatsapp;
 
-	// Nulo nos anuncios criados antes desta coluna existir.
-	private Instant criadoEm;
+    // Anuncio que chegou so com fotos; fica fora da listagem ate a pessoa mandar o texto.
+    // O default preenche as linhas que ja existiam quando a coluna foi criada.
+    @Column(columnDefinition = "boolean default false not null")
+    private boolean rascunho;
 
-	// Apagar o anuncio apaga as linhas das imagens (sem isso a chave estrangeira impediria o delete).
-	@OneToMany(mappedBy = "anuncio", cascade = CascadeType.REMOVE)
-	@OrderBy("ordem ASC, id ASC")
-	// Na listagem carrega as imagens de ate 50 anuncios por consulta, em vez de uma consulta por anuncio
-	@BatchSize(size = 50)
-	private List<ImagemAnuncio> imagens = new ArrayList<>();
+    // Nulo nos anuncios criados antes desta coluna existir.
+    private Instant criadoEm;
 
-	protected Anuncio() {
-	}
+    // Apagar o anuncio apaga as linhas das imagens (sem isso a chave estrangeira impediria o delete).
+    @OneToMany(mappedBy = "anuncio", cascade = CascadeType.REMOVE)
+    @OrderBy("ordem ASC, id ASC")
+    // Na listagem carrega as imagens de ate 50 anuncios por consulta, em vez de uma consulta por anuncio
+    @BatchSize(size = 50)
+    private List<ImagemAnuncio> imagens = new ArrayList<>();
 
-	public Anuncio(String titulo, String descricao, String contato) {
-		this(titulo, descricao, contato, null);
-	}
+    protected Anuncio() {
+    }
 
-	public Anuncio(String titulo, String descricao, String contato, String idWhatsapp) {
-		this.titulo = titulo;
-		this.descricao = descricao;
-		this.contato = contato;
-		this.idWhatsapp = idWhatsapp;
-	}
+    public Anuncio(String titulo, String descricao, String contato) {
+        this(titulo, descricao, contato, null, null);
+    }
 
-	/** Anuncio sem descricao, criado quando chegam fotos sem texto. */
-	public static Anuncio rascunho(String contato) {
-		Anuncio anuncio = new Anuncio("", null, contato, null);
-		anuncio.rascunho = true;
-		return anuncio;
-	}
+    public Anuncio(String titulo, String descricao, String contato, Categoria categoria) {
+        this(titulo, descricao, contato, null, categoria);
+    }
 
-	/** O texto chegou depois das fotos: vira a descricao e o anuncio sai do rascunho. */
-	public void publicarComDescricao(String descricao, String idWhatsapp) {
-		this.descricao = descricao;
-		if (this.idWhatsapp == null) {
-			this.idWhatsapp = idWhatsapp;
-		}
-		this.rascunho = false;
-	}
+    public Anuncio(String titulo, String descricao, String contato, String idWhatsapp) {
+        this(titulo, descricao, contato, idWhatsapp, null);
+    }
 
-	@PrePersist
-	void aoCriar() {
-		if (criadoEm == null) {
-			criadoEm = Instant.now();
-		}
-	}
+    public Anuncio(String titulo, String descricao, String contato, String idWhatsapp, Categoria categoria) {
+        this.titulo = titulo;
+        this.descricao = descricao;
+        this.contato = contato;
+        this.idWhatsapp = idWhatsapp;
+        this.categoria = categoria;
+    }
 
-	public Long getId() {
-		return id;
-	}
+    /** Anuncio sem descricao, criado quando chegam fotos sem texto. */
+    public static Anuncio rascunho(String contato) {
+        Anuncio anuncio = new Anuncio("", null, contato, null, null);
+        anuncio.rascunho = true;
+        return anuncio;
+    }
 
-	public String getTitulo() {
-		return titulo;
-	}
+    /** O texto chegou depois das fotos: vira a descricao e o anuncio sai do rascunho. */
+    public void publicarComDescricao(String descricao, String idWhatsapp) {
+        this.descricao = descricao;
+        if (this.idWhatsapp == null) {
+            this.idWhatsapp = idWhatsapp;
+        }
+        this.rascunho = false;
+    }
 
-	public void setTitulo(String titulo) {
-		this.titulo = titulo;
-	}
+    @PrePersist
+    void aoCriar() {
+        if (criadoEm == null) {
+            criadoEm = Instant.now();
+        }
+    }
 
-	public String getDescricao() {
-		return descricao;
-	}
+    public Long getId() {
+        return id;
+    }
 
-	public void setDescricao(String descricao) {
-		this.descricao = descricao;
-	}
+    public String getTitulo() {
+        return titulo;
+    }
 
-	public String getContato() {
-		return contato;
-	}
+    public void setTitulo(String titulo) {
+        this.titulo = titulo;
+    }
 
-	public String getIdWhatsapp() {
-		return idWhatsapp;
-	}
+    public String getDescricao() {
+        return descricao;
+    }
 
-	public void setContato(String contato) {
-		this.contato = contato;
-	}
+    public void setDescricao(String descricao) {
+        this.descricao = descricao;
+    }
 
-	public boolean isRascunho() {
-		return rascunho;
-	}
+    public String getContato() {
+        return contato;
+    }
 
-	public Instant getCriadoEm() {
-		return criadoEm;
-	}
+    public void setContato(String contato) {
+        this.contato = contato;
+    }
 
-	/** Somente leitura: imagens sao criadas pelo fluxo do webhook, nao pelo anuncio. */
-	public List<ImagemAnuncio> getImagens() {
-		return Collections.unmodifiableList(imagens);
-	}
+    public Categoria getCategoria() {
+        return categoria;
+    }
+
+    public void setCategoria(Categoria categoria) {
+        this.categoria = categoria;
+    }
+
+    public String getIdWhatsapp() {
+        return idWhatsapp;
+    }
+
+    public boolean isRascunho() {
+        return rascunho;
+    }
+
+    public Instant getCriadoEm() {
+        return criadoEm;
+    }
+
+    /** Somente leitura: imagens sao criadas pelo fluxo do webhook, nao pelo anuncio. */
+    public List<ImagemAnuncio> getImagens() {
+        return Collections.unmodifiableList(imagens);
+    }
 }
