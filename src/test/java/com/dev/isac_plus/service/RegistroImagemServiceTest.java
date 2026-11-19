@@ -22,6 +22,7 @@ import com.dev.isac_plus.chatBot.ContextoConversa;
 import com.dev.isac_plus.chatBot.EstadoAguardandoTexto;
 import com.dev.isac_plus.mapper.AnuncioMapper;
 import com.dev.isac_plus.model.Anuncio;
+import com.dev.isac_plus.model.Categoria;
 import com.dev.isac_plus.model.ImagemAnuncio;
 import com.dev.isac_plus.model.MetadadosImagem;
 import com.dev.isac_plus.model.StatusImagem;
@@ -112,6 +113,34 @@ class RegistroImagemServiceTest {
 		assertThat(anuncio.getDescricao()).isEqualTo("Vendo moto 150cc");
 		assertThat(anuncio.isRascunho()).isFalse();
 		assertThat(fotosDe(anuncio)).hasSize(1);
+	}
+
+	@Test
+	void fotoComLegendaPreservaTituloECategoriaDaConversa() {
+		ContextoConversa contexto = new ContextoConversa(estadoAguardandoTexto, "Bike urbana");
+		contexto.setCategoria(Categoria.VEICULOS);
+
+		estadoAguardandoTexto.processarImagem(
+				recebida("IMG_CONVERSA", "Vendo bicicleta", null, NUMERO, "image/jpeg"), contexto);
+
+		Anuncio anuncio = unicoAnuncio();
+		assertThat(anuncio.getTitulo()).isEqualTo("Bike urbana");
+		assertThat(anuncio.getCategoria()).isEqualTo(Categoria.VEICULOS);
+		assertThat(anuncio.getDescricao()).isEqualTo("Vendo bicicleta");
+	}
+
+	@Test
+	void fotoSemLegendaCriaRascunhoComTituloECategoriaDaConversa() {
+		ContextoConversa contexto = new ContextoConversa(estadoAguardandoTexto, "Apartamento amplo");
+		contexto.setCategoria(Categoria.IMOVEIS);
+
+		estadoAguardandoTexto.processarImagem(
+				recebida("IMG_RASCUNHO_CONVERSA", null, null, NUMERO, "image/jpeg"), contexto);
+
+		Anuncio anuncio = unicoAnuncio();
+		assertThat(anuncio.isRascunho()).isTrue();
+		assertThat(anuncio.getTitulo()).isEqualTo("Apartamento amplo");
+		assertThat(anuncio.getCategoria()).isEqualTo(Categoria.IMOVEIS);
 	}
 
 	@Test

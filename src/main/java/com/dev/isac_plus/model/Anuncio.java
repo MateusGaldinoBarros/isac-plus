@@ -78,7 +78,12 @@ public class Anuncio {
 
     /** Anuncio sem descricao, criado quando chegam fotos sem texto. */
     public static Anuncio rascunho(String contato) {
-        Anuncio anuncio = new Anuncio("", null, contato, null, null);
+        return rascunho(contato, "", null);
+    }
+
+    /** Rascunho de foto que preserva os dados coletados antes do envio da imagem. */
+    public static Anuncio rascunho(String contato, String titulo, Categoria categoria) {
+        Anuncio anuncio = new Anuncio(titulo, null, contato, null, categoria);
         anuncio.rascunho = true;
         return anuncio;
     }

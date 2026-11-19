@@ -25,6 +25,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import com.dev.isac_plus.dto.EvolutionWebhookEvento;
 import com.dev.isac_plus.chatBot.EstadoAguardandoConfirmacao;
+import com.dev.isac_plus.chatBot.EstadoAguardandoCategoria;
 import com.dev.isac_plus.chatBot.EstadoAguardandoTexto;
 import com.dev.isac_plus.chatBot.EstadoAguardandoTitulo;
 import com.dev.isac_plus.chatBot.EstadoInicial;
@@ -50,6 +51,7 @@ import tools.jackson.databind.json.JsonMapper;
 @DataJpaTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({ CriarAnuncioUseCase.class, EstadoInicial.class, EstadoAguardandoConfirmacao.class,
+		EstadoAguardandoCategoria.class,
 		EstadoAguardandoTitulo.class, EstadoAguardandoTexto.class, EvolutionRestClient.class, EvolutionConfig.class,
 		WebhookService.class, AnuncioService.class, AnuncioMapper.class,
 		RegistroImagemService.class, ValidadorImagem.class, TravaPorNumero.class,

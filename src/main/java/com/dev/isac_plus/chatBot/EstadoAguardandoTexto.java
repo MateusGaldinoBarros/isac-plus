@@ -40,7 +40,8 @@ public class EstadoAguardandoTexto implements EstadoConversaI {
     }
 
     public Optional<ImagemAnuncio> processarImagem(ImagemRecebida recebida, ContextoConversa contexto) {
-        Optional<ImagemAnuncio> imagem = registroImagemService.registrar(recebida, () -> escolherAnuncio(recebida));
+        Optional<ImagemAnuncio> imagem = registroImagemService.registrar(recebida,
+                () -> escolherAnuncio(recebida, contexto));
         if (imagem.isPresent() && recebida.legenda() != null) {
             finalizarConversa(new MensagemRecebida(recebida.idWhatsapp(), recebida.instancia(),
                     recebida.numero(), null, recebida.legenda()), contexto);
@@ -48,21 +49,27 @@ public class EstadoAguardandoTexto implements EstadoConversaI {
         return imagem;
     }
 
-    private Anuncio escolherAnuncio(ImagemRecebida recebida) {
+    private Anuncio escolherAnuncio(ImagemRecebida recebida, ContextoConversa contexto) {
         if (recebida.idAlbum() != null) {
             Optional<Anuncio> doAlbum = imagens.findFirstByIdAlbumWhatsappOrderByIdAsc(recebida.idAlbum())
                     .map(ImagemAnuncio::getAnuncio);
             if (doAlbum.isPresent()) {
                 Anuncio anuncio = doAlbum.get();
-                if (recebida.legenda() != null && anuncio.isRascunho()) {
-                    anuncio.publicarComDescricao(recebida.legenda(), recebida.idWhatsapp());
+                if (recebida.legenda() != null) {
+                    completarAnuncio(anuncio, recebida, contexto);
                 }
                 return anuncio;
             }
         }
 
         if (recebida.legenda() != null) {
-            return anuncios.save(new Anuncio("", recebida.legenda(), recebida.numero(), recebida.idWhatsapp()));
+            Optional<Anuncio> rascunho = anuncioService.maisRecente(recebida.numero()).filter(Anuncio::isRascunho);
+            if (rascunho.isPresent()) {
+                completarAnuncio(rascunho.get(), recebida, contexto);
+                return anuncios.save(rascunho.get());
+            }
+            return anuncios.save(new Anuncio(tituloDo(contexto), recebida.legenda(), recebida.numero(),
+                    recebida.idWhatsapp(), contexto.getCategoria()));
         }
 
         Optional<Anuncio> recente = anuncioService.maisRecente(recebida.numero());
@@ -70,7 +77,27 @@ public class EstadoAguardandoTexto implements EstadoConversaI {
             return recente.get();
         }
 
-        return anuncios.save(Anuncio.rascunho(recebida.numero()));
+        return anuncios.save(Anuncio.rascunho(recebida.numero(), tituloDo(contexto), contexto.getCategoria()));
+    }
+
+    private void completarAnuncio(Anuncio anuncio, ImagemRecebida recebida, ContextoConversa contexto) {
+        if (anuncio.isRascunho()) {
+            anuncio.publicarComDescricao(recebida.legenda(), recebida.idWhatsapp());
+        }
+        aplicarDadosDaConversa(anuncio, contexto);
+    }
+
+    private void aplicarDadosDaConversa(Anuncio anuncio, ContextoConversa contexto) {
+        if (contexto.getTitulo() != null && !contexto.getTitulo().isBlank()) {
+            anuncio.setTitulo(contexto.getTitulo());
+        }
+        if (contexto.getCategoria() != null) {
+            anuncio.setCategoria(contexto.getCategoria());
+        }
+    }
+
+    private String tituloDo(ContextoConversa contexto) {
+        return contexto.getTitulo() == null ? "" : contexto.getTitulo();
     }
 
     private boolean aceitaFotoSemLegenda(Anuncio recente, ImagemRecebida recebida) {
@@ -87,7 +114,8 @@ public class EstadoAguardandoTexto implements EstadoConversaI {
         anuncioService.criarDeMensagem(
                 mensagem,
                 contexto.getTitulo(),
-                mensagem.texto().trim());
+                mensagem.texto().trim(),
+                contexto.getCategoria());
 
         finalizarConversa(mensagem, contexto);
     }

@@ -14,6 +14,7 @@ import com.dev.isac_plus.dto.MensagemRecebida;
 import com.dev.isac_plus.exception.RecursoNaoEncontradoException;
 import com.dev.isac_plus.mapper.AnuncioMapper;
 import com.dev.isac_plus.model.Anuncio;
+import com.dev.isac_plus.model.Categoria;
 import com.dev.isac_plus.repository.AnuncioRepository;
 
 @Service
@@ -61,6 +62,12 @@ public class AnuncioService {
 
 	@Transactional
 	public Optional<AnuncioResponse> criarDeMensagem(MensagemRecebida mensagem, String titulo, String descricao) {
+		return criarDeMensagem(mensagem, titulo, descricao, null);
+	}
+
+	@Transactional
+	public Optional<AnuncioResponse> criarDeMensagem(MensagemRecebida mensagem, String titulo, String descricao,
+			Categoria categoria) {
 		if (mensagem.idWhatsapp() != null && repository.existsByIdWhatsapp(mensagem.idWhatsapp())) {
 			return Optional.empty();
 		}
@@ -70,10 +77,16 @@ public class AnuncioService {
 		Optional<Anuncio> rascunho = maisRecente(mensagem.numero()).filter(Anuncio::isRascunho);
 		if (rascunho.isPresent()) {
 			rascunho.get().publicarComDescricao(mensagem.texto(), mensagem.idWhatsapp());
+			if (titulo != null && !titulo.isBlank()) {
+				rascunho.get().setTitulo(titulo);
+			}
+			if (categoria != null) {
+				rascunho.get().setCategoria(categoria);
+			}
 			return Optional.of(mapper.toResponse(repository.save(rascunho.get())));
 		}
 
-		Anuncio anuncio = new Anuncio(titulo, descricao, mensagem.numero(), mensagem.idWhatsapp());
+		Anuncio anuncio = new Anuncio(titulo, descricao, mensagem.numero(), mensagem.idWhatsapp(), categoria);
 		return Optional.of(mapper.toResponse(repository.save(anuncio)));
 	}
 

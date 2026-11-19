@@ -27,6 +27,7 @@ import com.dev.isac_plus.dto.MensagemRecebida;
 import com.dev.isac_plus.exception.RecursoNaoEncontradoException;
 import com.dev.isac_plus.mapper.AnuncioMapper;
 import com.dev.isac_plus.model.Anuncio;
+import com.dev.isac_plus.model.Categoria;
 import com.dev.isac_plus.repository.AnuncioRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -95,6 +96,20 @@ class AnuncioServiceTest {
 		assertThat(captor.getValue().getContato()).isEqualTo("5511999");
 		assertThat(captor.getValue().getIdWhatsapp()).isEqualTo("ABC");
 		assertThat(resposta.titulo()).isEmpty();
+	}
+
+	@Test
+	void criarDeMensagemPersisteCategoriaSelecionada() {
+		when(repository.save(any(Anuncio.class))).thenAnswer(inv -> inv.getArgument(0));
+		MensagemRecebida mensagem = new MensagemRecebida("CAT", "ong", "5511999", "Ana", "Vendo bicicleta");
+
+		AnuncioResponse resposta = service.criarDeMensagem(mensagem, "Bike", "Vendo bicicleta", Categoria.VEICULOS)
+				.orElseThrow();
+
+		ArgumentCaptor<Anuncio> captor = ArgumentCaptor.forClass(Anuncio.class);
+		verify(repository).save(captor.capture());
+		assertThat(captor.getValue().getCategoria()).isEqualTo(Categoria.VEICULOS);
+		assertThat(resposta.categoria()).isEqualTo(Categoria.VEICULOS);
 	}
 
 	@Test
