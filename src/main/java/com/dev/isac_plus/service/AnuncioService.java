@@ -40,6 +40,7 @@ public class AnuncioService {
 	public List<AnuncioResponse> listar() {
 		return repository.findByRascunhoFalse().stream().map(mapper::toResponse).toList();
 	}
+	
 
 	@Transactional(readOnly = true)
 	public AnuncioResponse buscarPorId(Long id) {
